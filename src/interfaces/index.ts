@@ -62,3 +62,7 @@ export interface INotification {
   vissibleToUserIds: object[];
   relatedEventId?: string;
 }
+export interface ITempOTP {
+  email: string;
+  otp: string;
+}

@@ -8,10 +8,12 @@ import {
   findByUserIDService,
   findUserByStudentIdService,
   loginService,
+  resetUserPasswordByIdService,
   updateUserByIdService,
 } from "../services/userService";
 import { responseDTO } from "../DTO/response";
 import { isValidObjectId } from "mongoose";
+import sendEmail from "../services/emailService";
 
 const userLogin = async (req: Request, res: Response, next: NextFunction) => {
   const credentials = req.body;
@@ -196,6 +198,69 @@ const deleteUserById = async (
   }
 };
 
+const changeUserPasswordByIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const userId = req.params.id as string;
+  const password = req.body.password;
+  if (!userId || !password) {
+    res.status(400).json({ message: "User ID and password are required" });
+    return;
+  }
+  try {
+    const updatedUser = await resetUserPasswordByIdService(userId, password);
+    if (updatedUser && updatedUser.success === false) {
+      res.status(500).json({ message: updatedUser.message });
+    } else {
+      res.status(200).json({
+        success: true,
+        user: updatedUser,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Failed to change password" });
+    console.error("Error changing user password", error);
+    return;
+  }
+};
+const getUserByOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const userId = req.params.id as string;
+  const userEmail = req.body.email as string;
+  if (!userId || !userEmail) {
+    res.status(400).json({ message: "User ID and email are required" });
+    return;
+  }
+  try {
+    const user = await findByUserIDService(userId);
+    if (user && user.success === false) {
+      res.status(500).json({ message: user.message });
+    } else {
+      const otp = Math.floor(100000 + Math.random() * 900000);
+      const sendMail = await sendEmail(
+        userEmail,
+        "Password Change Request",
+        `Your OTP for password change is ${otp}`,
+      );
+      res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+        data: { otp },
+      });
+      return;
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Failed to send OTP" });
+    console.error("Error sending OTP", error);
+    return;
+  }
+};
+
 export {
   userLogin,
   createUser,
@@ -204,4 +269,6 @@ export {
   findUserByStudentId,
   updateUserbyID,
   deleteUserById,
+  changeUserPasswordByIdController,
+  getUserByOtp,
 };

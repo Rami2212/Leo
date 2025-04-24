@@ -6,6 +6,7 @@ import User from "../models/userModels";
 import * as userRepo from "../repos/userRepo";
 import Jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import sendEmail from "./emailService";
 
 dotenv.config();
 const jwtSecret = process.env.JWT_SECRET as string;
@@ -29,6 +30,11 @@ const loginService = async (email: string, password: string) => {
         jwtSecret.toString(),
         { expiresIn: "24h" },
       );
+      await sendEmail(
+        email,
+        "Login Notification",
+        "You have successfully logged in to your account",
+      );
       return {
         message: "Login successful",
         success: true,
@@ -41,7 +47,11 @@ const loginService = async (email: string, password: string) => {
         },
       };
     } else {
-      console.warn(`Invalid password for user: ${email}`);
+      await sendEmail(
+        email,
+        "Login Attempt",
+        "Someone attempted to log in to your account with an invalid email.",
+      );
       return {
         message: "Invalid password",
         success: false,
@@ -83,15 +93,23 @@ const createUserService = async (userDetail: IUser) => {
       ...userDetail,
       password: hashPassword,
     });
-    await userRepo.createUserRepo(user);
+    const createdUser = await userRepo.createUserRepo(user);
+
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    await sendEmail(
+      userDetail.email,
+      "Account Created",
+      `Your account has been created successfully. Your OTP is ${otp}`,
+    );
     return {
       message: "User Created Successfully",
       success: true,
       data: {
-        userID: userDetail.studentId,
+        userID: createdUser._id,
         email: userDetail.email,
         role: userDetail.role,
         name: userDetail.name,
+        otp,
         token,
       },
     };
@@ -165,6 +183,46 @@ const updateUserByIdService = async (id: string, user: IUser) => {
     };
   }
 };
+const resetUserPasswordByIdService = async (
+  userID: string,
+  newPassWord: string,
+) => {
+  const hashPassword = await bcrypt.hash(newPassWord, soltRounds);
+  try {
+    const user = await userRepo.findUserByIdRepo(userID);
+    if (!user) {
+      return {
+        message: "User not found",
+        success: false,
+      };
+    }
+    const updatedUser = await userRepo.updateUserByIdRepo(userID, {
+      password: hashPassword,
+    } as IUser);
+    if (!updatedUser) {
+      return {
+        message: "Failed to update password",
+        success: false,
+      };
+    }
+    await sendEmail(
+      user.email,
+      "Password Reset",
+      "Your password has been reset successfully",
+    );
+    return {
+      message: "Password updated successfully",
+      success: true,
+      data: updatedUser,
+    };
+  } catch (error) {
+    console.error("Error in resetUserPasswordByIdService", error);
+    return {
+      message: "Failed to reset password",
+      success: false,
+    };
+  }
+};
 const deleteUserByIdService = async (id: string) => {
   try {
     const deletedUser = await userRepo.deleteUserByIdRepo(id);
@@ -206,4 +264,5 @@ export {
   updateUserByIdService,
   deleteUserByIdService,
   findByUserIDService,
+  resetUserPasswordByIdService,
 };
