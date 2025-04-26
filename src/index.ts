@@ -49,7 +49,7 @@ mongoose
   });
 
 app
-  .listen(PORT, () => {
+  .listen(3000, '0.0.0.0', () => {
     console.log(
       `Server is Successfully Running, and App is listening on port ${PORT}`,
     );
