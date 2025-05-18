@@ -1,6 +1,6 @@
 /** @format */
 import { IUser } from "../interfaces";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { findUserByEmailRepo } from "../repos/userRepo";
 import User from "../models/userModels";
 import * as userRepo from "../repos/userRepo";
