@@ -8,7 +8,7 @@ import {
   findEventByDateService,
   findEventByIdService,
   updateEventService,
-} from "../services/EventService";
+} from "../services/eventService";
 import { IEvent } from "../interfaces";
 import { isValidObjectId } from "mongoose";
 
